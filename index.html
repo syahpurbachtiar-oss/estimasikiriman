@@ -100,17 +100,12 @@
             return result;
         }
 
-        // Fungsi baru untuk mendapatkan URL path yang dinamis 
-        // Mengatasi masalah file not found di GitHub Pages karena subfolder repository
         function getBaseUrl() {
             let path = window.location.pathname;
             let pathArray = path.split('/');
-            // Jika dijalankan di localhost, biasanya pathnya kosong atau langsung file
             if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || pathArray.length <= 2) {
                 return "./";
             }
-            // Jika dijalankan di github pages (misal: /estimasikiriman/index.html)
-            // Kita butuh nama repository-nya
             let repoName = pathArray[1]; 
             return "/" + repoName + "/";
         }
@@ -122,7 +117,6 @@
             }
 
             let currentFile = fileNames.shift();
-            // Menambahkan baseURL agar PapaParse tidak tersesat mencari di root (/) 
             let fileUrl = getBaseUrl() + currentFile;
             
             console.log("Mencari di URL:", fileUrl);
@@ -175,7 +169,7 @@
             if(document.getElementById('hasil').innerText === "Mencari...") return;
 
             let rawTanggal = document.getElementById('tanggal').value;
-            let dateMatch = rawTanggal.match(/(\\d{2})\\/(\\d{2})\\/(\\d{4})/);
+            let dateMatch = rawTanggal.match(/(\d{2})\/(\d{2})\/(\d{4})/);
             if (!dateMatch) {
                 alert("Harap masukkan tanggal dengan format DD/MM/YYYY yang benar.");
                 return;
@@ -204,7 +198,7 @@
             }
 
             if (isOriginDestRequired) {
-                const regexKode = /^[A-Z]{3}\\d+$/; 
+                const regexKode = /^[A-Z]{3}\d+$/; 
                 
                 if (!regexKode.test(origin)) {
                     alert("Origin: harap input dengan benar (3 Huruf + minimal 5 Angka)");
