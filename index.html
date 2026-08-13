@@ -19,7 +19,8 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             
-            <form id="estimasiForm" class="space-y-4" onsubmit="event.preventDefault(); hitungEstimasi();">
+            <!-- Form input -->
+            <form id="estimasiForm" class="space-y-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">1. TANGGAL KIRIMAN</label>
                     <input type="text" id="tanggal" placeholder="Contoh: 03/08/2026" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -165,86 +166,99 @@
             });
         }
 
+        // Fungsi utama sekarang dibungkus error tracking
         function hitungEstimasi() {
-            if(document.getElementById('hasil').innerText === "Mencari...") return;
+            try {
+                if(document.getElementById('hasil').innerText === "Mencari...") return;
 
-            let rawTanggal = document.getElementById('tanggal').value;
-            let dateMatch = rawTanggal.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-            if (!dateMatch) {
-                alert("Harap masukkan tanggal dengan format DD/MM/YYYY yang benar.");
-                return;
-            }
-            let dateObj = new Date(`${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`);
-
-            let marketplace = document.getElementById('marketplace').value.trim().toUpperCase();
-            let origin = document.getElementById('origin').value.trim().toUpperCase();
-            let destination = document.getElementById('destination').value.trim().toUpperCase();
-            let serviceRaw = document.getElementById('service').value.trim().toUpperCase();
-
-            let service = "";
-            if (serviceRaw.includes("YES*")) service = "YES*";
-            else if (serviceRaw.includes("YES")) service = "YES";
-            else if (serviceRaw.includes("REG")) service = "REG";
-            else if (serviceRaw.includes("CTC")) service = "CTC";
-            else if (serviceRaw.includes("JTR")) service = "JTR";
-
-            let isOriginDestRequired = true;
-            let isMarketplaceAngka = !isNaN(marketplace) && marketplace !== "";
-
-            if (service === "YES" || service === "YES*") {
-                isOriginDestRequired = false;
-            } else if (isMarketplaceAngka && (service === "REG" || service === "CTC")) {
-                isOriginDestRequired = false;
-            }
-
-            if (isOriginDestRequired) {
-                const regexKode = /^[A-Z]{3}\d+$/; 
-                
-                if (!regexKode.test(origin)) {
-                    alert("Origin: harap input dengan benar (3 Huruf + minimal 5 Angka)");
+                let rawTanggal = document.getElementById('tanggal').value;
+                let dateMatch = rawTanggal.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+                if (!dateMatch) {
+                    alert("Harap masukkan tanggal dengan format DD/MM/YYYY yang benar.");
                     return;
                 }
-                if (!regexKode.test(destination)) {
-                    alert("Destination: harap input dengan benar (3 Huruf + minimal 5 Angka)");
-                    return;
-                }
-            }
-
-            if (service === "YES") {
-                document.getElementById('hasil').innerText = formatTanggalHasil(tambahHariKalender(dateObj, 1), true);
-            } 
-            else if (service === "YES*") {
-                document.getElementById('hasil').innerText = formatTanggalHasil(tambahHariKalender(dateObj, 2), true);
-            }
-            else if (isMarketplaceAngka && (service === "REG" || service === "CTC")) {
-                document.getElementById('hasil').innerText = formatTanggalHasil(tambahHariKerja(dateObj, parseInt(marketplace)), false);
-            }
-            else {
-                document.getElementById('hasil').innerHTML = `<span class="text-xl">Mencari...</span>`;
                 
-                let fileAntrean = [];
-                if (marketplace === "SHOPEE" && service === "REG") {
-                    fileAntrean = ["reg_shopee_1.csv", "reg_shopee_2.csv", "reg_shopee_3.csv"]; 
-                } else if (marketplace === "SHOPEE" && service === "JTR") {
-                    fileAntrean = ["jtr_shopee.csv"];
-                } else {
-                    fileAntrean = ["data_default.csv"];
+                let dateObj = new Date(`${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`);
+
+                let marketplace = document.getElementById('marketplace').value.trim().toUpperCase();
+                let origin = document.getElementById('origin').value.trim().toUpperCase();
+                let destination = document.getElementById('destination').value.trim().toUpperCase();
+                let serviceRaw = document.getElementById('service').value.trim().toUpperCase();
+
+                let service = "";
+                if (serviceRaw.includes("YES*")) service = "YES*";
+                else if (serviceRaw.includes("YES")) service = "YES";
+                else if (serviceRaw.includes("REG")) service = "REG";
+                else if (serviceRaw.includes("CTC")) service = "CTC";
+                else if (serviceRaw.includes("JTR")) service = "JTR";
+
+                let isOriginDestRequired = true;
+                let isMarketplaceAngka = !isNaN(marketplace) && marketplace !== "";
+
+                if (service === "YES" || service === "YES*") {
+                    isOriginDestRequired = false;
+                } else if (isMarketplaceAngka && (service === "REG" || service === "CTC")) {
+                    isOriginDestRequired = false;
                 }
 
-                cariSlaDiCSV(fileAntrean, service, origin, destination, function(slaDitemukan) {
-                    if (slaDitemukan !== null) {
-                        let estimasiDate = tambahHariKalender(dateObj, slaDitemukan);
-                        document.getElementById('hasil').innerText = formatTanggalHasil(estimasiDate, false);
-                    } else {
-                        document.getElementById('hasil').innerHTML = `<span class="text-red-500 text-lg">SLA tidak ditemukan</span>`;
+                if (isOriginDestRequired) {
+                    const regexKode = /^[A-Z]{3}\d+$/; 
+                    
+                    if (!regexKode.test(origin)) {
+                        alert("Origin: harap input dengan benar (3 Huruf + minimal 5 Angka)");
+                        return;
                     }
-                });
+                    if (!regexKode.test(destination)) {
+                        alert("Destination: harap input dengan benar (3 Huruf + minimal 5 Angka)");
+                        return;
+                    }
+                }
+
+                if (service === "YES") {
+                    document.getElementById('hasil').innerText = formatTanggalHasil(tambahHariKalender(dateObj, 1), true);
+                } 
+                else if (service === "YES*") {
+                    document.getElementById('hasil').innerText = formatTanggalHasil(tambahHariKalender(dateObj, 2), true);
+                }
+                else if (isMarketplaceAngka && (service === "REG" || service === "CTC")) {
+                    document.getElementById('hasil').innerText = formatTanggalHasil(tambahHariKerja(dateObj, parseInt(marketplace)), false);
+                }
+                else {
+                    document.getElementById('hasil').innerHTML = `<span class="text-xl">Mencari...</span>`;
+                    
+                    let fileAntrean = [];
+                    if (marketplace === "SHOPEE" && service === "REG") {
+                        fileAntrean = ["reg_shopee_1.csv", "reg_shopee_2.csv", "reg_shopee_3.csv"]; 
+                    } else if (marketplace === "SHOPEE" && service === "JTR") {
+                        fileAntrean = ["jtr_shopee.csv"];
+                    } else {
+                        fileAntrean = ["data_default.csv"];
+                    }
+
+                    cariSlaDiCSV(fileAntrean, service, origin, destination, function(slaDitemukan) {
+                        if (slaDitemukan !== null) {
+                            let estimasiDate = tambahHariKalender(dateObj, slaDitemukan);
+                            document.getElementById('hasil').innerText = formatTanggalHasil(estimasiDate, false);
+                        } else {
+                            document.getElementById('hasil').innerHTML = `<span class="text-red-500 text-lg">SLA tidak ditemukan</span>`;
+                        }
+                    });
+                }
+            } catch (error) {
+                alert("Sistem Error: " + error.message);
+                console.error(error);
             }
         }
 
+        // Pengaman ekstra untuk Form dan Tombol Enter/Spasi
+        document.getElementById('estimasiForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            hitungEstimasi();
+        });
+
         document.addEventListener('keydown', function(event) {
             if (event.code === 'Space') {
-                if (document.activeElement.tagName !== 'INPUT') {
+                if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'BUTTON') {
                     event.preventDefault();
                     document.getElementById('searchButton').click();
                 }
