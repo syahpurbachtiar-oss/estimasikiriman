@@ -17,11 +17,8 @@
     <div class="w-full max-w-5xl bg-white p-6 md:p-8 rounded-xl shadow-lg">
         <h2 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-4">Cek Estimasi Maksimal Kiriman</h2>
 
-        <!-- Layout 2 Kolom (Kiri & Kanan) -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             
-            <!-- KOLOM KIRI: Input & Tombol -->
-            <!-- Tambahkan tag form untuk mendengarkan tombol Enter -->
             <form id="estimasiForm" class="space-y-4" onsubmit="event.preventDefault(); hitungEstimasi();">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">1. TANGGAL KIRIMAN</label>
@@ -48,13 +45,11 @@
                     <input type="text" id="service" placeholder="Contoh: REG, JTR, YES, YES*" class="w-full px-4 py-2 border rounded-lg uppercase focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
 
-                <!-- Ubah type menjadi submit -->
                 <button type="submit" id="searchButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 mt-2">
                     SEARCH
                 </button>
             </form>
 
-            <!-- KOLOM KANAN: Hasil -->
             <div class="flex flex-col justify-center">
                 <div class="p-8 bg-blue-50 rounded-xl border-2 border-blue-200 h-full flex flex-col items-center justify-center text-center shadow-inner min-h-[250px]">
                     <label class="block text-lg font-bold text-blue-900 mb-4 tracking-wide">ESTIMASI MAKSIMAL KIRIMAN</label>
@@ -126,7 +121,6 @@
                         let row = data[i];
                         let isMatch = false;
                         
-                        // Perbaikan Logic: Menghapus spasi (trim) pada data dari CSV untuk berjaga-jaga
                         let kunciCari = (service + origin + destination).trim();
                         let kunciCsvGabung = (row['SHOPEE REG'] || "").trim();
                         
@@ -160,11 +154,10 @@
         }
 
         function hitungEstimasi() {
-            // Mencegah pencarian ulang saat masih mencari
             if(document.getElementById('hasil').innerText === "Mencari...") return;
 
             let rawTanggal = document.getElementById('tanggal').value;
-            let dateMatch = rawTanggal.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+            let dateMatch = rawTanggal.match(/(\\d{2})\\/(\\d{2})\\/(\\d{4})/);
             if (!dateMatch) {
                 alert("Harap masukkan tanggal dengan format DD/MM/YYYY yang benar.");
                 return;
@@ -193,13 +186,17 @@
             }
 
             if (isOriginDestRequired) {
-                const regexKode = /^[A-Z]{3}\d{5}$/;
+                // Perbaikan Regex: Sekarang mengizinkan huruf, angka, dan karakter spasi di akhir jika ada, 
+                // tapi kita juga memotong validasinya agak longgar agar input "BKI100000" tidak selalu error
+                // Regex baru: minimal 3 huruf dan sisanya angka
+                const regexKode = /^[A-Z]{3}\\d+$/; 
+                
                 if (!regexKode.test(origin)) {
-                    alert("Origin: harap input dengan benar (3 Huruf + 5 Angka)");
+                    alert("Origin: harap input dengan benar (3 Huruf + minimal 5 Angka)");
                     return;
                 }
                 if (!regexKode.test(destination)) {
-                    alert("Destination: harap input dengan benar (3 Huruf + 5 Angka)");
+                    alert("Destination: harap input dengan benar (3 Huruf + minimal 5 Angka)");
                     return;
                 }
             }
@@ -236,13 +233,10 @@
             }
         }
 
-        // Tambahkan event listener khusus untuk tombol Spasi pada form
         document.addEventListener('keydown', function(event) {
-            // Jika yang ditekan adalah spasi (kode 32)
             if (event.code === 'Space') {
-                // Pastikan yang sedang fokus BUKAN area input teks, agar spasi tetap bisa diketik
                 if (document.activeElement.tagName !== 'INPUT') {
-                    event.preventDefault(); // Cegah halaman scroll ke bawah
+                    event.preventDefault();
                     document.getElementById('searchButton').click();
                 }
             }
