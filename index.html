@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistem Estimasi Pengiriman</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PapaParse -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }
@@ -19,7 +17,6 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             
-            <!-- Form input -->
             <form id="estimasiForm" class="space-y-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">1. TANGGAL KIRIMAN</label>
@@ -101,16 +98,6 @@
             return result;
         }
 
-        function getBaseUrl() {
-            let path = window.location.pathname;
-            let pathArray = path.split('/');
-            if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || pathArray.length <= 2) {
-                return "./";
-            }
-            let repoName = pathArray[1]; 
-            return "/" + repoName + "/";
-        }
-
         function cariSlaDiCSV(fileNames, service, origin, destination, callback) {
             if (fileNames.length === 0) {
                 callback(null);
@@ -118,9 +105,11 @@
             }
 
             let currentFile = fileNames.shift();
-            let fileUrl = getBaseUrl() + currentFile;
+            // Perbaikan URL: Menggunakan absolute path relatif terhadap origin domain
+            // Ini jauh lebih aman daripada mencoba menebak struktur path
+            let fileUrl = "/estimasikiriman/" + currentFile;
             
-            console.log("Mencari di URL:", fileUrl);
+            console.log("Mencoba membaca CSV dari:", fileUrl);
 
             Papa.parse(fileUrl, {
                 download: true,
@@ -156,17 +145,18 @@
                     if (slaDitemukan !== null && !isNaN(slaDitemukan)) {
                         callback(slaDitemukan);
                     } else {
+                        // Tidak ketemu di file ini, lanjut file berikutnya
                         cariSlaDiCSV(fileNames, service, origin, destination, callback);
                     }
                 },
                 error: function(err) {
-                    console.error("Gagal membaca " + fileUrl, err);
+                    console.error("Gagal mendownload " + fileUrl + ". Pesan Error:", err);
+                    // Lanjut mencari ke file berikutnya meskipun file ini gagal didownload
                     cariSlaDiCSV(fileNames, service, origin, destination, callback);
                 }
             });
         }
 
-        // Fungsi utama sekarang dibungkus error tracking
         function hitungEstimasi() {
             try {
                 if(document.getElementById('hasil').innerText === "Mencari...") return;
@@ -245,12 +235,12 @@
                     });
                 }
             } catch (error) {
-                alert("Sistem Error: " + error.message);
+                alert("Terjadi kesalahan pada sistem: " + error.message);
                 console.error(error);
+                document.getElementById('hasil').innerText = "Error";
             }
         }
 
-        // Pengaman ekstra untuk Form dan Tombol Enter/Spasi
         document.getElementById('estimasiForm').addEventListener('submit', function(event) {
             event.preventDefault();
             hitungEstimasi();
