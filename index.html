@@ -152,7 +152,7 @@
 
         function hitungEstimasi() {
             let rawTanggal = document.getElementById('tanggal').value;
-            let dateMatch = rawTanggal.match(/(\\d{2})\\/(\\d{2})\\/(\\d{4})/);
+            let dateMatch = rawTanggal.match(/(\d{2})\/(\d{2})\/(\d{4})/);
             if (!dateMatch) {
                 alert("Harap masukkan tanggal dengan format DD/MM/YYYY yang benar.");
                 return;
@@ -181,7 +181,7 @@
             }
 
             if (isOriginDestRequired) {
-                const regexKode = /^[A-Z]{3}\\d{5}$/;
+                const regexKode = /^[A-Z]{3}\d{5}$/;
                 if (!regexKode.test(origin)) {
                     alert("Origin: harap input dengan benar (3 Huruf + 5 Angka)");
                     return;
@@ -226,7 +226,3 @@
     </script>
 </body>
 </html>
-"""
-
-with open('/mnt/data/index_v4_layout.html', 'w') as f:
-    f.write(html_content)
