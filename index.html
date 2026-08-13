@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistem Estimasi Pengiriman</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PapaParse -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }
@@ -59,10 +61,32 @@
     </div>
 
     <script>
+        // Data Kalender 2026 Lengkap (Libur Nasional & Cuti Bersama)
         const hariLiburNasional = [
-            "2026-01-01", "2026-02-17", "2026-03-20", "2026-03-21", 
-            "2026-08-17", "2026-12-25"
+            "2026-01-01", // Tahun Baru Masehi
+            "2026-01-16", // Isra Mikraj
+            "2026-02-16", // Tahun Baru Imlek (Cuti Bersama)
+            "2026-02-17", // Tahun Baru Imlek
+            "2026-03-18", // Nyepi (Cuti Bersama)
+            "2026-03-19", // Nyepi
+            "2026-03-20", // Idulfitri (Cuti Bersama)
+            "2026-03-21", // Idulfitri
+            "2026-03-23", // Idulfitri (Cuti Bersama)
+            "2026-03-24", // Idulfitri (Cuti Bersama)
+            "2026-04-03", // Wafat Yesus Kristus
+            "2026-05-01", // Hari Buruh Internasional
+            "2026-05-14", // Kenaikan Yesus Kristus
+            "2026-05-15", // Kenaikan Yesus (Cuti Bersama)
+            "2026-05-27", // Idul Adha
+            "2026-05-28", // Idul Adha (Cuti Bersama)
+            "2026-06-01", // Hari Lahir Pancasila
+            "2026-06-16", // Tahun Baru Islam
+            "2026-08-17", // Hari Kemerdekaan RI
+            "2026-08-25", // Maulid Nabi Muhammad
+            "2026-12-24", // Natal (Cuti Bersama)
+            "2026-12-25"  // Natal
         ];
+        
         const namaHari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jum'at", "Sabtu"];
 
         function formatTanggalHasil(dateObj, isYes = false) {
@@ -91,6 +115,8 @@
                 let mm = String(result.getMonth() + 1).padStart(2, '0');
                 let dd = String(result.getDate()).padStart(2, '0');
                 let dateStr = `${yyyy}-${mm}-${dd}`;
+                
+                // Menghitung hari kerja: Bukan hari Minggu (0) DAN bukan tanggal merah
                 if (dayOfWeek !== 0 && !hariLiburNasional.includes(dateStr)) {
                     hariDitambah++;
                 }
@@ -105,16 +131,15 @@
             }
 
             let currentFile = fileNames.shift();
-            // Perbaikan URL: Menggunakan absolute path relatif terhadap origin domain
-            // Ini jauh lebih aman daripada mencoba menebak struktur path
-            let fileUrl = "/estimasikiriman/" + currentFile;
+            // Path disederhanakan: langsung panggil nama file karena ada di folder yang sama
+            let fileUrl = currentFile; 
             
-            console.log("Mencoba membaca CSV dari:", fileUrl);
+            console.log("Mencoba mendownload dan membaca CSV dari:", fileUrl);
 
             Papa.parse(fileUrl, {
                 download: true,
                 header: true,
-                worker: true,
+                // worker: true DIMATIKAN karena diblokir oleh GitHub Pages
                 complete: function(results) {
                     let data = results.data;
                     let slaDitemukan = null;
@@ -145,13 +170,13 @@
                     if (slaDitemukan !== null && !isNaN(slaDitemukan)) {
                         callback(slaDitemukan);
                     } else {
-                        // Tidak ketemu di file ini, lanjut file berikutnya
+                        // Lanjut cari ke file berikutnya jika di file ini tidak ada
                         cariSlaDiCSV(fileNames, service, origin, destination, callback);
                     }
                 },
                 error: function(err) {
-                    console.error("Gagal mendownload " + fileUrl + ". Pesan Error:", err);
-                    // Lanjut mencari ke file berikutnya meskipun file ini gagal didownload
+                    console.error("Gagal mendownload " + fileUrl, err);
+                    // Lanjut cari ke file berikutnya meskipun file ini gagal/tidak ditemukan
                     cariSlaDiCSV(fileNames, service, origin, destination, callback);
                 }
             });
@@ -218,6 +243,7 @@
                     
                     let fileAntrean = [];
                     if (marketplace === "SHOPEE" && service === "REG") {
+                        // PENTING: Pastikan nama file ini sama persis dengan yang ada di repository GitHub Anda
                         fileAntrean = ["reg_shopee_1.csv", "reg_shopee_2.csv", "reg_shopee_3.csv"]; 
                     } else if (marketplace === "SHOPEE" && service === "JTR") {
                         fileAntrean = ["jtr_shopee.csv"];
