@@ -10,6 +10,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }
+        /* CSS untuk memastikan teks hasil bisa diblok seluruhnya dengan double click */
+        .select-all {
+            user-select: all;
+            -webkit-user-select: all;
+            -moz-user-select: all;
+            -ms-user-select: all;
+            display: inline-block; /* Penting agar block element tidak memecah seleksi */
+        }
     </style>
 </head>
 <body class="p-4 md:p-8 flex items-center justify-center min-h-screen">
@@ -53,7 +61,7 @@
             <div class="flex flex-col justify-center">
                 <div class="p-8 bg-blue-50 rounded-xl border-2 border-blue-200 h-full flex flex-col items-center justify-center text-center shadow-inner min-h-[250px]">
                     <label class="block text-lg font-bold text-blue-900 mb-4 tracking-wide">ESTIMASI MAKSIMAL KIRIMAN</label>
-                    <div id="hasil" class="text-3xl md:text-4xl font-extrabold text-blue-700">...</div>
+                    <div id="hasil" class="text-3xl md:text-4xl font-extrabold text-blue-700 select-all">...</div>
                 </div>
             </div>
 
@@ -61,30 +69,13 @@
     </div>
 
     <script>
-        // Data Kalender 2026 Lengkap (Libur Nasional & Cuti Bersama)
         const hariLiburNasional = [
-            "2026-01-01", // Tahun Baru Masehi
-            "2026-01-16", // Isra Mikraj
-            "2026-02-16", // Tahun Baru Imlek (Cuti Bersama)
-            "2026-02-17", // Tahun Baru Imlek
-            "2026-03-18", // Nyepi (Cuti Bersama)
-            "2026-03-19", // Nyepi
-            "2026-03-20", // Idulfitri (Cuti Bersama)
-            "2026-03-21", // Idulfitri
-            "2026-03-23", // Idulfitri (Cuti Bersama)
-            "2026-03-24", // Idulfitri (Cuti Bersama)
-            "2026-04-03", // Wafat Yesus Kristus
-            "2026-05-01", // Hari Buruh Internasional
-            "2026-05-14", // Kenaikan Yesus Kristus
-            "2026-05-15", // Kenaikan Yesus (Cuti Bersama)
-            "2026-05-27", // Idul Adha
-            "2026-05-28", // Idul Adha (Cuti Bersama)
-            "2026-06-01", // Hari Lahir Pancasila
-            "2026-06-16", // Tahun Baru Islam
-            "2026-08-17", // Hari Kemerdekaan RI
-            "2026-08-25", // Maulid Nabi Muhammad
-            "2026-12-24", // Natal (Cuti Bersama)
-            "2026-12-25"  // Natal
+            "2026-01-01", "2026-01-16", "2026-02-16", "2026-02-17", 
+            "2026-03-18", "2026-03-19", "2026-03-20", "2026-03-21", 
+            "2026-03-23", "2026-03-24", "2026-04-03", "2026-05-01", 
+            "2026-05-14", "2026-05-15", "2026-05-27", "2026-05-28", 
+            "2026-06-01", "2026-06-16", "2026-08-17", "2026-08-25", 
+            "2026-12-24", "2026-12-25"
         ];
         
         const namaHari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jum'at", "Sabtu"];
@@ -94,8 +85,12 @@
             let mm = String(dateObj.getMonth() + 1).padStart(2, '0');
             let yy = String(dateObj.getFullYear()).slice(-2);
             let hari = namaHari[dateObj.getDay()];
-            let hasilText = `${hari} ${dd}/${mm}/${yy}`;
-            if (isYes) hasilText += " jam 23.59";
+            
+            // Format HTML khusus agar tidak ada spasi pemisah antar karakter yang membuat blok text terputus
+            // Menggunakan &nbsp; untuk spasi yang utuh
+            let hasilText = `${hari}&nbsp;${dd}/${mm}/${yy}`;
+            if (isYes) hasilText += "&nbsp;jam&nbsp;23.59";
+            
             return hasilText;
         }
 
@@ -116,7 +111,6 @@
                 let dd = String(result.getDate()).padStart(2, '0');
                 let dateStr = `${yyyy}-${mm}-${dd}`;
                 
-                // Menghitung hari kerja: Bukan hari Minggu (0) DAN bukan tanggal merah
                 if (dayOfWeek !== 0 && !hariLiburNasional.includes(dateStr)) {
                     hariDitambah++;
                 }
@@ -124,68 +118,69 @@
             return result;
         }
 
-        function cariSlaDiCSV(fileNames, service, origin, destination, callback) {
-            if (fileNames.length === 0) {
-                callback(null);
-                return;
-            }
+        // Variabel global untuk menampung data CSV di memori agar cepat
+        let dataCSVCache = {};
 
-            let currentFile = fileNames.shift();
-            // Path disederhanakan: langsung panggil nama file karena ada di folder yang sama
-            let fileUrl = currentFile; 
+        function preLoadCSV() {
+            // Load file CSV secara background saat web pertama dibuka (maksimal 3 detik)
+            const filesToLoad = ["reg_shopee_1.csv", "reg_shopee_2.csv", "reg_shopee_3.csv", "jtr_shopee.csv"];
             
-            console.log("Mencoba mendownload dan membaca CSV dari:", fileUrl);
-
-            Papa.parse(fileUrl, {
-                download: true,
-                header: true,
-                // worker: true DIMATIKAN karena diblokir oleh GitHub Pages
-                complete: function(results) {
-                    let data = results.data;
-                    let slaDitemukan = null;
-
-                    for (let i = 0; i < data.length; i++) {
-                        let row = data[i];
-                        let isMatch = false;
-                        
-                        let kunciCari = (service + origin + destination).trim();
-                        let kunciCsvGabung = (row['SHOPEE REG'] || "").trim();
-                        
-                        let csvService = (row['SERVICE'] || "").trim();
-                        let csvOrigin = (row['ORIGIN'] || "").trim();
-                        let csvDest = (row['DESTINATION'] || "").trim();
-
-                        if (kunciCsvGabung === kunciCari) {
-                            isMatch = true;
-                        } else if (csvService === service && csvOrigin === origin && csvDest === destination) {
-                            isMatch = true;
-                        }
-
-                        if (isMatch) {
-                            slaDitemukan = parseInt(row['SLA']);
-                            break;
-                        }
+            filesToLoad.forEach(file => {
+                Papa.parse(file, {
+                    download: true,
+                    header: true,
+                    complete: function(results) {
+                        dataCSVCache[file] = results.data;
+                        console.log(`${file} berhasil dimuat ke cache. Total baris: ${results.data.length}`);
+                    },
+                    error: function(err) {
+                        console.error(`Gagal memuat ${file}`, err);
                     }
-
-                    if (slaDitemukan !== null && !isNaN(slaDitemukan)) {
-                        callback(slaDitemukan);
-                    } else {
-                        // Lanjut cari ke file berikutnya jika di file ini tidak ada
-                        cariSlaDiCSV(fileNames, service, origin, destination, callback);
-                    }
-                },
-                error: function(err) {
-                    console.error("Gagal mendownload " + fileUrl, err);
-                    // Lanjut cari ke file berikutnya meskipun file ini gagal/tidak ditemukan
-                    cariSlaDiCSV(fileNames, service, origin, destination, callback);
-                }
+                });
             });
+        }
+
+        // Panggil fungsi pre-load saat halaman dimuat
+        window.onload = preLoadCSV;
+
+        function cariSlaDiCache(fileNames, service, origin, destination) {
+            let slaDitemukan = null;
+            let kunciCari = (service + origin + destination).trim();
+
+            for (let f = 0; f < fileNames.length; f++) {
+                let currentFile = fileNames[f];
+                let data = dataCSVCache[currentFile];
+                
+                if (!data) continue; // Jika file belum ke-load, lewati
+
+                for (let i = 0; i < data.length; i++) {
+                    let row = data[i];
+                    let isMatch = false;
+                    
+                    let kunciCsvGabung = (row['SHOPEE REG'] || "").trim();
+                    let csvService = (row['SERVICE'] || "").trim();
+                    let csvOrigin = (row['ORIGIN'] || "").trim();
+                    let csvDest = (row['DESTINATION'] || "").trim();
+
+                    if (kunciCsvGabung === kunciCari) {
+                        isMatch = true;
+                    } else if (csvService === service && csvOrigin === origin && csvDest === destination) {
+                        isMatch = true;
+                    }
+
+                    if (isMatch) {
+                        slaDitemukan = parseInt(row['SLA']);
+                        break;
+                    }
+                }
+                
+                if (slaDitemukan !== null) break; // Keluar dari loop file jika sudah ketemu
+            }
+            return slaDitemukan;
         }
 
         function hitungEstimasi() {
             try {
-                if(document.getElementById('hasil').innerText === "Mencari...") return;
-
                 let rawTanggal = document.getElementById('tanggal').value;
                 let dateMatch = rawTanggal.match(/(\d{2})\/(\d{2})\/(\d{4})/);
                 if (!dateMatch) {
@@ -210,9 +205,11 @@
                 let isOriginDestRequired = true;
                 let isMarketplaceAngka = !isNaN(marketplace) && marketplace !== "";
 
-                if (service === "YES" || service === "YES*") {
+                // PERBAIKAN LOGIKA JTR ANGKA (POINT 3)
+                // Jika input angka dan JTR, tidak butuh origin/dest
+                if (isMarketplaceAngka && (service === "REG" || service === "CTC" || service === "JTR")) {
                     isOriginDestRequired = false;
-                } else if (isMarketplaceAngka && (service === "REG" || service === "CTC")) {
+                } else if (service === "YES" || service === "YES*") {
                     isOriginDestRequired = false;
                 }
 
@@ -230,40 +227,39 @@
                 }
 
                 if (service === "YES") {
-                    document.getElementById('hasil').innerText = formatTanggalHasil(tambahHariKalender(dateObj, 1), true);
+                    document.getElementById('hasil').innerHTML = formatTanggalHasil(tambahHariKalender(dateObj, 1), true);
                 } 
                 else if (service === "YES*") {
-                    document.getElementById('hasil').innerText = formatTanggalHasil(tambahHariKalender(dateObj, 2), true);
+                    document.getElementById('hasil').innerHTML = formatTanggalHasil(tambahHariKalender(dateObj, 2), true);
                 }
-                else if (isMarketplaceAngka && (service === "REG" || service === "CTC")) {
-                    document.getElementById('hasil').innerText = formatTanggalHasil(tambahHariKerja(dateObj, parseInt(marketplace)), false);
+                // Jika input berupa angka dan servicenya REG, CTC, atau JTR
+                else if (isMarketplaceAngka && (service === "REG" || service === "CTC" || service === "JTR")) {
+                    document.getElementById('hasil').innerHTML = formatTanggalHasil(tambahHariKerja(dateObj, parseInt(marketplace)), false);
                 }
                 else {
-                    document.getElementById('hasil').innerHTML = `<span class="text-xl">Mencari...</span>`;
-                    
                     let fileAntrean = [];
                     if (marketplace === "SHOPEE" && service === "REG") {
-                        // PENTING: Pastikan nama file ini sama persis dengan yang ada di repository GitHub Anda
                         fileAntrean = ["reg_shopee_1.csv", "reg_shopee_2.csv", "reg_shopee_3.csv"]; 
                     } else if (marketplace === "SHOPEE" && service === "JTR") {
                         fileAntrean = ["jtr_shopee.csv"];
                     } else {
-                        fileAntrean = ["data_default.csv"];
+                        fileAntrean = ["data_default.csv"]; // Fallback jika perlu
                     }
 
-                    cariSlaDiCSV(fileAntrean, service, origin, destination, function(slaDitemukan) {
-                        if (slaDitemukan !== null) {
-                            let estimasiDate = tambahHariKalender(dateObj, slaDitemukan);
-                            document.getElementById('hasil').innerText = formatTanggalHasil(estimasiDate, false);
-                        } else {
-                            document.getElementById('hasil').innerHTML = `<span class="text-red-500 text-lg">SLA tidak ditemukan</span>`;
-                        }
-                    });
+                    // Pencarian Instan dari Memory (Cache)
+                    let slaDitemukan = cariSlaDiCache(fileAntrean, service, origin, destination);
+
+                    if (slaDitemukan !== null) {
+                        let estimasiDate = tambahHariKalender(dateObj, slaDitemukan);
+                        document.getElementById('hasil').innerHTML = formatTanggalHasil(estimasiDate, false);
+                    } else {
+                        document.getElementById('hasil').innerHTML = `<span class="text-red-500 text-lg">SLA tidak ditemukan</span>`;
+                    }
                 }
             } catch (error) {
                 alert("Terjadi kesalahan pada sistem: " + error.message);
                 console.error(error);
-                document.getElementById('hasil').innerText = "Error";
+                document.getElementById('hasil').innerHTML = "Error";
             }
         }
 
