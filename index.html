@@ -10,6 +10,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }
+        /* CSS untuk memastikan teks hasil bisa diblok seluruhnya dengan double click */
+        .select-all {
+            user-select: all;
+            -webkit-user-select: all;
+            -moz-user-select: all;
+            -ms-user-select: all;
+            display: inline-block; /* Penting agar block element tidak memecah seleksi */
+        }
     </style>
 </head>
 <body class="p-4 md:p-8 flex items-center justify-center min-h-screen">
@@ -53,7 +61,7 @@
             <div class="flex flex-col justify-center">
                 <div class="p-8 bg-blue-50 rounded-xl border-2 border-blue-200 h-full flex flex-col items-center justify-center text-center shadow-inner min-h-[250px]">
                     <label class="block text-lg font-bold text-blue-900 mb-4 tracking-wide">ESTIMASI MAKSIMAL KIRIMAN</label>
-                    <div id="hasil" class="text-3xl md:text-4xl font-extrabold text-blue-700">...</div>
+                    <div id="hasil" class="text-3xl md:text-4xl font-extrabold text-blue-700 select-all">...</div>
                 </div>
             </div>
 
@@ -81,9 +89,6 @@
             let hasilTanggal = `${dd}/${mm}/${yy}`;
             if (isYes) hasilTanggal += " jam 23.59";
             
-            // Perbaikan Double Click: Hanya bagian tanggal/jam yang dibungkus span
-            // Menggunakan event JS ondblclick untuk memblok keseluruhan isi span ini saat di-double klik
-            // Sekali klik akan bersikap normal seperti teks biasa
             return `${hari} <span ondblclick="window.getSelection().selectAllChildren(this)" class="cursor-text">${hasilTanggal}</span>`;
         }
 
@@ -172,7 +177,7 @@
         function hitungEstimasi() {
             try {
                 let rawTanggal = document.getElementById('tanggal').value;
-                let dateMatch = rawTanggal.match(/(\\d{2})\\/(\\d{2})\\/(\\d{4})/);
+                let dateMatch = rawTanggal.match(/(\d{2})\/(\d{2})\/(\d{4})/);
                 if (!dateMatch) {
                     alert("Harap masukkan tanggal dengan format DD/MM/YYYY yang benar.");
                     return;
@@ -202,7 +207,7 @@
                 }
 
                 if (isOriginDestRequired) {
-                    const regexKode = /^[A-Z]{3}\\d+$/; 
+                    const regexKode = /^[A-Z]{3}\d+$/; 
                     
                     if (!regexKode.test(origin)) {
                         alert("Origin: harap input dengan benar (3 Huruf + minimal 5 Angka)");
@@ -220,7 +225,6 @@
                 else if (service === "YES*") {
                     document.getElementById('hasil').innerHTML = formatTanggalHasil(tambahHariKalender(dateObj, 2), true);
                 }
-                // Perbaikan JTR Angka: Memisahkan REG/CTC dengan JTR
                 else if (isMarketplaceAngka && (service === "REG" || service === "CTC")) {
                     document.getElementById('hasil').innerHTML = formatTanggalHasil(tambahHariKerja(dateObj, parseInt(marketplace)), false);
                 }
