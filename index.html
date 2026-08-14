@@ -16,7 +16,7 @@
             -webkit-user-select: all;
             -moz-user-select: all;
             -ms-user-select: all;
-            display: inline-block; /* Penting agar block element tidak memecah seleksi */
+            display: inline-block; 
         }
     </style>
 </head>
@@ -193,14 +193,15 @@
                 let service = "";
                 if (serviceRaw.includes("YES*")) service = "YES*";
                 else if (serviceRaw.includes("YES")) service = "YES";
+                // LOGIC BARU: Konversi CTC menjadi REG secara paksa
+                else if (serviceRaw.includes("CTC")) service = "REG"; 
                 else if (serviceRaw.includes("REG")) service = "REG";
-                else if (serviceRaw.includes("CTC")) service = "CTC";
                 else if (serviceRaw.includes("JTR")) service = "JTR";
 
                 let isOriginDestRequired = true;
                 let isMarketplaceAngka = !isNaN(marketplace) && marketplace !== "";
 
-                if (isMarketplaceAngka && (service === "REG" || service === "CTC" || service === "JTR")) {
+                if (isMarketplaceAngka && (service === "REG" || service === "JTR")) {
                     isOriginDestRequired = false;
                 } else if (service === "YES" || service === "YES*") {
                     isOriginDestRequired = false;
@@ -225,7 +226,7 @@
                 else if (service === "YES*") {
                     document.getElementById('hasil').innerHTML = formatTanggalHasil(tambahHariKalender(dateObj, 2), true);
                 }
-                else if (isMarketplaceAngka && (service === "REG" || service === "CTC")) {
+                else if (isMarketplaceAngka && service === "REG") {
                     document.getElementById('hasil').innerHTML = formatTanggalHasil(tambahHariKerja(dateObj, parseInt(marketplace)), false);
                 }
                 else if (isMarketplaceAngka && service === "JTR") {
@@ -233,8 +234,7 @@
                 }
                 else {
                     let fileAntrean = [];
-                    // PERBAIKAN: Menambahkan CTC agar dibaca ke file REG
-                    if (marketplace === "SHOPEE" && (service === "REG" || service === "CTC")) {
+                    if (marketplace === "SHOPEE" && service === "REG") {
                         fileAntrean = ["reg_shopee_1.csv", "reg_shopee_2.csv", "reg_shopee_3.csv"]; 
                     } else if (marketplace === "SHOPEE" && service === "JTR") {
                         fileAntrean = ["jtr_shopee.csv"];
