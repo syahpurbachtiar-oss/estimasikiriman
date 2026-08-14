@@ -233,7 +233,8 @@
                 }
                 else {
                     let fileAntrean = [];
-                    if (marketplace === "SHOPEE" && service === "REG") {
+                    // PERBAIKAN: Menambahkan CTC agar dibaca ke file REG
+                    if (marketplace === "SHOPEE" && (service === "REG" || service === "CTC")) {
                         fileAntrean = ["reg_shopee_1.csv", "reg_shopee_2.csv", "reg_shopee_3.csv"]; 
                     } else if (marketplace === "SHOPEE" && service === "JTR") {
                         fileAntrean = ["jtr_shopee.csv"];
