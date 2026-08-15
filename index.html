@@ -10,14 +10,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }
-        /* CSS untuk memastikan teks hasil bisa diblok seluruhnya dengan double click */
-        .select-all {
-            user-select: all;
-            -webkit-user-select: all;
-            -moz-user-select: all;
-            -ms-user-select: all;
-            display: inline-block; 
-        }
     </style>
 </head>
 <body class="p-4 md:p-8 flex items-center justify-center min-h-screen">
@@ -61,7 +53,7 @@
             <div class="flex flex-col justify-center">
                 <div class="p-8 bg-blue-50 rounded-xl border-2 border-blue-200 h-full flex flex-col items-center justify-center text-center shadow-inner min-h-[250px]">
                     <label class="block text-lg font-bold text-blue-900 mb-4 tracking-wide">ESTIMASI MAKSIMAL KIRIMAN</label>
-                    <div id="hasil" class="text-3xl md:text-4xl font-extrabold text-blue-700 select-all">...</div>
+                    <div id="hasil" class="text-3xl md:text-4xl font-extrabold text-blue-700">...</div>
                 </div>
             </div>
 
@@ -193,7 +185,6 @@
                 let service = "";
                 if (serviceRaw.includes("YES*")) service = "YES*";
                 else if (serviceRaw.includes("YES")) service = "YES";
-                // LOGIC BARU: Konversi CTC menjadi REG secara paksa
                 else if (serviceRaw.includes("CTC")) service = "REG"; 
                 else if (serviceRaw.includes("REG")) service = "REG";
                 else if (serviceRaw.includes("JTR")) service = "JTR";
@@ -220,17 +211,23 @@
                     }
                 }
 
+                let estimasiDate = null;
+                let finalSla = null;
+
+                // Proses Perhitungan Tanggal Utama
                 if (service === "YES") {
-                    document.getElementById('hasil').innerHTML = formatTanggalHasil(tambahHariKalender(dateObj, 1), true);
+                    estimasiDate = tambahHariKalender(dateObj, 1);
                 } 
                 else if (service === "YES*") {
-                    document.getElementById('hasil').innerHTML = formatTanggalHasil(tambahHariKalender(dateObj, 2), true);
+                    estimasiDate = tambahHariKalender(dateObj, 2);
                 }
                 else if (isMarketplaceAngka && service === "REG") {
-                    document.getElementById('hasil').innerHTML = formatTanggalHasil(tambahHariKerja(dateObj, parseInt(marketplace)), false);
+                    finalSla = parseInt(marketplace);
+                    estimasiDate = tambahHariKerja(dateObj, finalSla);
                 }
                 else if (isMarketplaceAngka && service === "JTR") {
-                    document.getElementById('hasil').innerHTML = formatTanggalHasil(tambahHariKalender(dateObj, parseInt(marketplace)), false);
+                    finalSla = parseInt(marketplace);
+                    estimasiDate = tambahHariKalender(dateObj, finalSla);
                 }
                 else {
                     let fileAntrean = [];
@@ -245,12 +242,40 @@
                     let slaDitemukan = cariSlaDiCache(fileAntrean, service, origin, destination);
 
                     if (slaDitemukan !== null) {
-                        let estimasiDate = tambahHariKalender(dateObj, slaDitemukan);
-                        document.getElementById('hasil').innerHTML = formatTanggalHasil(estimasiDate, false);
+                        finalSla = slaDitemukan;
+                        estimasiDate = tambahHariKalender(dateObj, finalSla);
                     } else {
                         document.getElementById('hasil').innerHTML = `<span class="text-red-500 text-lg">SLA tidak ditemukan</span>`;
+                        return; // Berhenti jika SLA tidak ada
                     }
                 }
+
+                // Membangun Output Visual
+                let htmlOutput = "";
+
+                // Logic 1: Tambahkan (X hari) KHUSUS untuk Shopee (REG, CTC, JTR)
+                if (marketplace === "SHOPEE" && (service === "REG" || service === "JTR") && finalSla !== null) {
+                    htmlOutput += `<div class="mb-2">(${finalSla} hari)</div>`;
+                }
+
+                // Cetak Tanggal Utama
+                let isYes = (service === "YES" || service === "YES*");
+                htmlOutput += `<div>${formatTanggalHasil(estimasiDate, isYes)}</div>`;
+
+                // Logic 2: Peringatan "Lewat estimasi" UNIVERSAL
+                let today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                let checkDate = new Date(estimasiDate);
+                checkDate.setHours(0, 0, 0, 0);
+                
+                if (checkDate < today) {
+                    htmlOutput += `<div class="mt-2">- Lewat estimasi dan open tiket -</div>`;
+                }
+
+                // Tampilkan ke layar
+                document.getElementById('hasil').innerHTML = htmlOutput;
+
             } catch (error) {
                 alert("Terjadi kesalahan pada sistem: " + error.message);
                 console.error(error);
