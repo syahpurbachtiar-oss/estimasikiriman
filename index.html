@@ -10,6 +10,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }
+        /* CSS untuk memastikan teks hasil bisa diblok seluruhnya dengan double click */
+        .select-all {
+            user-select: all;
+            -webkit-user-select: all;
+            -moz-user-select: all;
+            -ms-user-select: all;
+            display: inline-block; 
+        }
     </style>
 </head>
 <body class="p-4 md:p-8 flex items-center justify-center min-h-screen">
@@ -27,17 +35,17 @@
 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">2. JENIS MARKETPLACE</label>
-                    <input type="text" id="marketplace" placeholder="Contoh: SHOPEE atau 6" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="marketplace" placeholder="Contoh: SHOPEE atau TOKOPEDIA" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">3. ORIGIN</label>
-                    <input type="text" id="origin" placeholder="Contoh: BKI10000" class="w-full px-4 py-2 border rounded-lg uppercase focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="origin" placeholder="Contoh: BKI10000 atau Jakarta Selatan" class="w-full px-4 py-2 border rounded-lg uppercase focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">4. DESTINATION</label>
-                    <input type="text" id="destination" placeholder="Contoh: UPG21817" class="w-full px-4 py-2 border rounded-lg uppercase focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="destination" placeholder="Contoh: UPG21817 atau Wonosobo" class="w-full px-4 py-2 border rounded-lg uppercase focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
 
                 <div>
@@ -53,7 +61,7 @@
             <div class="flex flex-col justify-center">
                 <div class="p-8 bg-blue-50 rounded-xl border-2 border-blue-200 h-full flex flex-col items-center justify-center text-center shadow-inner min-h-[250px]">
                     <label class="block text-lg font-bold text-blue-900 mb-4 tracking-wide">ESTIMASI MAKSIMAL KIRIMAN</label>
-                    <div id="hasil" class="text-3xl md:text-4xl font-extrabold text-blue-700">...</div>
+                    <div id="hasil" class="text-3xl md:text-4xl font-extrabold text-blue-700 select-all">...</div>
                 </div>
             </div>
 
@@ -108,10 +116,43 @@
             return result;
         }
 
+        // Mesin Penerjemah Otomatis (Tokgistic/Tokopedia)
+        function translateCityName(city) {
+            let parts = city.trim().split(/\s+/);
+            let direction = "";
+            let hasKota = false;
+            let baseName = [];
+
+            parts.forEach(part => {
+                let w = part.toLowerCase();
+                if (w === "selatan") direction = "South";
+                else if (w === "barat") direction = "West";
+                else if (w === "timur") direction = "East";
+                else if (w === "utara") direction = "North";
+                else if (w === "pusat") direction = "Central";
+                else if (w === "kota") hasKota = true;
+                else if (w === "kabupaten" || w === "kab" || w === "kab.") {
+                    // Abaikan tulisan kabupaten
+                } else {
+                    baseName.push(part.charAt(0).toUpperCase() + part.slice(1).toLowerCase());
+                }
+            });
+
+            let finalName = baseName.join(" ");
+            if (direction !== "") finalName = direction + " " + finalName;
+            if (hasKota) finalName = finalName + " City";
+
+            return finalName.trim();
+        }
+
         let dataCSVCache = {};
 
         function preLoadCSV() {
-            const filesToLoad = ["reg_shopee_1.csv", "reg_shopee_2.csv", "reg_shopee_3.csv", "jtr_shopee.csv"];
+            // Tambahkan file reg_tokopedia.csv dan jtr_tokopedia.csv ke daftar pre-load
+            const filesToLoad = [
+                "reg_shopee_1.csv", "reg_shopee_2.csv", "reg_shopee_3.csv", "jtr_shopee.csv",
+                "reg_tokopedia.csv", "jtr_tokopedia.csv"
+            ];
             
             filesToLoad.forEach(file => {
                 Papa.parse(file, {
@@ -132,7 +173,9 @@
 
         function cariSlaDiCache(fileNames, service, origin, destination) {
             let slaDitemukan = null;
-            let kunciCari = (service + origin + destination).trim();
+            let kunciCari = (service + origin + destination).trim().toUpperCase();
+            let searchOrigin = origin.trim().toUpperCase();
+            let searchDest = destination.trim().toUpperCase();
 
             for (let f = 0; f < fileNames.length; f++) {
                 let currentFile = fileNames[f];
@@ -144,19 +187,26 @@
                     let row = data[i];
                     let isMatch = false;
                     
-                    let kunciCsvGabung = (row['SHOPEE REG'] || "").trim();
-                    let csvService = (row['SERVICE'] || "").trim();
-                    let csvOrigin = (row['ORIGIN'] || "").trim();
-                    let csvDest = (row['DESTINATION'] || "").trim();
+                    let kunciCsvGabung = (row['SHOPEE REG'] || "").trim().toUpperCase();
+                    // Menyesuaikan dengan format kolom di Shopee maupun Tokopedia
+                    let csvService = (row['SERVICE'] || row['id_type'] || "").trim().toUpperCase();
+                    let csvOrigin = (row['ORIGIN'] || row['shipment_city_name'] || "").trim().toUpperCase();
+                    let csvDest = (row['DESTINATION'] || row['recipient_city_name'] || "").trim().toUpperCase();
 
-                    if (kunciCsvGabung === kunciCari) {
+                    if (kunciCsvGabung !== "" && kunciCsvGabung === kunciCari) {
                         isMatch = true;
-                    } else if (csvService === service && csvOrigin === origin && csvDest === destination) {
-                        isMatch = true;
+                    } else if (csvOrigin === searchOrigin && csvDest === searchDest) {
+                        if (csvService === "" || csvService === service) {
+                            isMatch = true;
+                        }
                     }
 
                     if (isMatch) {
-                        slaDitemukan = parseInt(row['SLA']);
+                        // Membaca SLA dari kolom 'SLA' (Shopee) atau 'Target SLA' (Tokopedia)
+                        let valSla = row['SLA'] || row['Target SLA'];
+                        if (valSla !== undefined && valSla !== null) {
+                            slaDitemukan = parseInt(valSla);
+                        }
                         break;
                     }
                 }
@@ -178,9 +228,12 @@
                 let dateObj = new Date(`${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`);
 
                 let marketplace = document.getElementById('marketplace').value.trim().toUpperCase();
-                let origin = document.getElementById('origin').value.trim().toUpperCase();
-                let destination = document.getElementById('destination').value.trim().toUpperCase();
+                let origin = document.getElementById('origin').value.trim();
+                let destination = document.getElementById('destination').value.trim();
                 let serviceRaw = document.getElementById('service').value.trim().toUpperCase();
+
+                // Deteksi jika marketplace adalah Tokgistic/TikTok/Tokopedia
+                let isTokgisticOrTokopedia = marketplace.includes("TOKGISTIC") || marketplace.includes("TOKOPEDIA") || marketplace.includes("TIKTOK");
 
                 let service = "";
                 if (serviceRaw.includes("YES*")) service = "YES*";
@@ -199,22 +252,23 @@
                 }
 
                 if (isOriginDestRequired) {
-                    const regexKode = /^[A-Z]{3}\d+$/; 
-                    
-                    if (!regexKode.test(origin)) {
-                        alert("Origin: harap input dengan benar (3 Huruf + minimal 5 Angka)");
-                        return;
-                    }
-                    if (!regexKode.test(destination)) {
-                        alert("Destination: harap input dengan benar (3 Huruf + minimal 5 Angka)");
-                        return;
+                    // Bypass aturan 3 Huruf 5 Angka HANYA untuk Tokgistic/Tokopedia (Karena inputnya teks/nama kota)
+                    if (!isTokgisticOrTokopedia) {
+                        const regexKode = /^[A-Z]{3}\d+$/; 
+                        if (!regexKode.test(origin.toUpperCase())) {
+                            alert("Origin: harap input dengan benar (3 Huruf + minimal 5 Angka)");
+                            return;
+                        }
+                        if (!regexKode.test(destination.toUpperCase())) {
+                            alert("Destination: harap input dengan benar (3 Huruf + minimal 5 Angka)");
+                            return;
+                        }
                     }
                 }
 
                 let estimasiDate = null;
                 let finalSla = null;
 
-                // Proses Perhitungan Tanggal Utama
                 if (service === "YES") {
                     estimasiDate = tambahHariKalender(dateObj, 1);
                 } 
@@ -235,34 +289,40 @@
                         fileAntrean = ["reg_shopee_1.csv", "reg_shopee_2.csv", "reg_shopee_3.csv"]; 
                     } else if (marketplace === "SHOPEE" && service === "JTR") {
                         fileAntrean = ["jtr_shopee.csv"];
+                    } else if (isTokgisticOrTokopedia && service === "REG") {
+                        fileAntrean = ["reg_tokopedia.csv"]; 
+                    } else if (isTokgisticOrTokopedia && service === "JTR") {
+                        fileAntrean = ["jtr_tokopedia.csv"]; 
                     } else {
                         fileAntrean = ["data_default.csv"]; 
                     }
 
-                    let slaDitemukan = cariSlaDiCache(fileAntrean, service, origin, destination);
+                    // Terapkan mesin terjemahan kota jika marketplace = Tokgistic/Tokopedia
+                    let searchOrigin = isTokgisticOrTokopedia ? translateCityName(origin) : origin;
+                    let searchDest = isTokgisticOrTokopedia ? translateCityName(destination) : destination;
+
+                    let slaDitemukan = cariSlaDiCache(fileAntrean, service, searchOrigin, searchDest);
 
                     if (slaDitemukan !== null) {
                         finalSla = slaDitemukan;
                         estimasiDate = tambahHariKalender(dateObj, finalSla);
                     } else {
                         document.getElementById('hasil').innerHTML = `<span class="text-red-500 text-lg">SLA tidak ditemukan</span>`;
-                        return; // Berhenti jika SLA tidak ada
+                        return;
                     }
                 }
 
-                // Membangun Output Visual
                 let htmlOutput = "";
 
-                // Logic 1: Tambahkan (X hari) KHUSUS untuk Shopee (REG, CTC, JTR)
-                if (marketplace === "SHOPEE" && (service === "REG" || service === "JTR") && finalSla !== null) {
+                // Menambahkan info (X hari) untuk Shopee/Tokgistic (REG, CTC, JTR)
+                if ((marketplace === "SHOPEE" || isTokgisticOrTokopedia) && (service === "REG" || service === "JTR") && finalSla !== null) {
                     htmlOutput += `<div class="mb-2">(${finalSla} hari)</div>`;
                 }
 
-                // Cetak Tanggal Utama
                 let isYes = (service === "YES" || service === "YES*");
                 htmlOutput += `<div>${formatTanggalHasil(estimasiDate, isYes)}</div>`;
 
-                // Logic 2: Peringatan "Lewat estimasi" UNIVERSAL
+                // Logika peringatan kedaluwarsa universal
                 let today = new Date();
                 today.setHours(0, 0, 0, 0);
                 
@@ -270,10 +330,9 @@
                 checkDate.setHours(0, 0, 0, 0);
                 
                 if (checkDate < today) {
-                    htmlOutput += `<div class="mt-2">- Lewat estimasi dan open tiket -</div>`;
+                    htmlOutput += `<div class="mt-2 text-red-600 text-lg font-bold">- Lewat estimasi dan open tiket -</div>`;
                 }
 
-                // Tampilkan ke layar
                 document.getElementById('hasil').innerHTML = htmlOutput;
 
             } catch (error) {
