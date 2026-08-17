@@ -114,26 +114,70 @@
             let direction = "";
             let hasKota = false;
             let baseName = [];
+            let isKepulauan = false;
+            let isPulau = false;
+            let isPegunungan = false;
 
-            parts.forEach(part => {
-                let w = part.toLowerCase();
+            // Daftar Pasti Kota (Inclusion List) yang menggunakan kata "City"
+            const cityWithCityList = [
+                "bandung", "tangerang", "bekasi", "semarang", "malang", "bogor", 
+                "tasikmalaya", "cirebon", "pekalongan", "serang", "sukabumi", 
+                "kediri", "magelang", "tegal", "madiun", "pasuruan", "blitar", 
+                "mojokerto", "banjar", "probolinggo", "sorong", "jayapura", 
+                "kupang", "bima", "gorontalo", "solok"
+            ];
+
+            for (let i = 0; i < parts.length; i++) {
+                let w = parts[i].toLowerCase();
+                
                 if (w === "selatan") direction = "South";
-                else if (w === "barat") direction = "West";
+                else if (w === "barat") {
+                    if (i + 1 < parts.length && parts[i+1].toLowerCase() === "daya") {
+                        direction = "Southwest";
+                        i++; // Melewati kata 'daya'
+                    } else {
+                        direction = "West";
+                    }
+                }
+                else if (w === "southwest") direction = "Southwest";
                 else if (w === "timur") direction = "East";
                 else if (w === "utara") direction = "North";
-                else if (w === "pusat") direction = "Central";
+                else if (w === "pusat" || w === "tengah" || w === "central") direction = "Central";
                 else if (w === "tenggara" || w === "southeast") direction = "Southeast";
-                else if (w === "kota") hasKota = true;
+                else if (w === "kota" || w === "city") hasKota = true;
                 else if (w === "kabupaten" || w === "kab" || w === "kab.") {
                     // Abaikan tulisan kabupaten
-                } else {
-                    baseName.push(part.charAt(0).toUpperCase() + part.slice(1).toLowerCase());
                 }
-            });
+                else if (w === "kepulauan" || w === "islands") isKepulauan = true;
+                else if (w === "pulau" || w === "island") isPulau = true;
+                else if (w === "pegunungan" || w === "mountains") isPegunungan = true;
+                else {
+                    baseName.push(parts[i].charAt(0).toUpperCase() + parts[i].slice(1).toLowerCase());
+                }
+            }
 
-            let finalName = baseName.join(" ");
+            let baseNameStr = baseName.join(" ");
+            let finalName = baseNameStr;
+
+            // Memasukkan unsur geografis di belakang nama
+            if (isKepulauan) finalName = finalName + " Islands";
+            if (isPulau) finalName = finalName + " Island";
+            if (isPegunungan) finalName = finalName + " Mountains";
+
+            // Memasukkan unsur arah di depan nama
             if (direction !== "") finalName = direction + " " + finalName;
-            if (hasKota) finalName = finalName + " City";
+
+            // City Inclusion Logic: Cek apakah baseName ada di daftar pengecualian 26 kota
+            if (hasKota) {
+                if (cityWithCityList.includes(baseNameStr.toLowerCase())) {
+                    finalName = finalName + " City";
+                }
+            }
+            
+            // Bypass Typo dari Database untuk Maluku Tenggara
+            if (finalName.toLowerCase() === "southeast maluku") {
+                finalName = "Sotheast Maluku";
+            }
 
             return finalName.trim();
         }
@@ -141,7 +185,6 @@
         let dataCSVCache = {};
 
         function preLoadCSV() {
-            // Tambahkan file reg_tokopedia.csv dan jtr_tokopedia.csv ke daftar pre-load
             const filesToLoad = [
                 "reg_shopee_1.csv", "reg_shopee_2.csv", "reg_shopee_3.csv", "jtr_shopee.csv",
                 "reg_tokopedia.csv", "jtr_tokopedia.csv"
@@ -181,7 +224,6 @@
                     let isMatch = false;
                     
                     let kunciCsvGabung = (row['SHOPEE REG'] || "").trim().toUpperCase();
-                    // Menyesuaikan dengan format kolom di Shopee maupun Tokopedia
                     let csvService = (row['SERVICE'] || row['id_type'] || "").trim().toUpperCase();
                     let csvOrigin = (row['ORIGIN'] || row['shipment_city_name'] || "").trim().toUpperCase();
                     let csvDest = (row['DESTINATION'] || row['recipient_city_name'] || "").trim().toUpperCase();
@@ -195,7 +237,6 @@
                     }
 
                     if (isMatch) {
-                        // Membaca SLA dari kolom 'SLA' (Shopee) atau 'Target SLA' (Tokopedia)
                         let valSla = row['SLA'] || row['Target SLA'];
                         if (valSla !== undefined && valSla !== null) {
                             slaDitemukan = parseInt(valSla);
@@ -225,7 +266,6 @@
                 let destination = document.getElementById('destination').value.trim();
                 let serviceRaw = document.getElementById('service').value.trim().toUpperCase();
 
-                // Deteksi jika marketplace adalah Tokgistic/TikTok/Tokopedia
                 let isTokgisticOrTokopedia = marketplace.includes("TOKGISTIC") || marketplace.includes("TOKOPEDIA") || marketplace.includes("TIKTOK");
 
                 let service = "";
@@ -245,7 +285,6 @@
                 }
 
                 if (isOriginDestRequired) {
-                    // Bypass aturan 3 Huruf 5 Angka HANYA untuk Tokgistic/Tokopedia (Karena inputnya teks/nama kota)
                     if (!isTokgisticOrTokopedia) {
                         const regexKode = /^[A-Z]{3}\d+$/; 
                         if (!regexKode.test(origin.toUpperCase())) {
@@ -290,7 +329,6 @@
                         fileAntrean = ["data_default.csv"]; 
                     }
 
-                    // Terapkan mesin terjemahan kota jika marketplace = Tokgistic/Tokopedia
                     let searchOrigin = isTokgisticOrTokopedia ? translateCityName(origin) : origin;
                     let searchDest = isTokgisticOrTokopedia ? translateCityName(destination) : destination;
 
@@ -307,7 +345,6 @@
 
                 let htmlOutput = "";
 
-                // Menambahkan info (X hari) untuk Shopee/Tokgistic (REG, CTC, JTR)
                 if ((marketplace === "SHOPEE" || isTokgisticOrTokopedia) && (service === "REG" || service === "JTR") && finalSla !== null) {
                     htmlOutput += `<div class="mb-2">(${finalSla} hari)</div>`;
                 }
@@ -315,7 +352,6 @@
                 let isYes = (service === "YES" || service === "YES*");
                 htmlOutput += `<div>${formatTanggalHasil(estimasiDate, isYes)}</div>`;
 
-                // Logika peringatan kedaluwarsa universal
                 let today = new Date();
                 today.setHours(0, 0, 0, 0);
                 
