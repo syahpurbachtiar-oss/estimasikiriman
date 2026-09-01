@@ -142,7 +142,21 @@
                 else if (w === "southwest") direction = "Southwest";
                 else if (w === "timur") direction = "East";
                 else if (w === "utara") direction = "North";
-                else if (w === "pusat" || w === "tengah" || w === "central") direction = "Central";
+                
+                // LOGIKA BARU: Penanganan Arah Ganda (Tengah Utara & Tengah Selatan)
+                else if (w === "tengah") {
+                    if (i + 1 < parts.length && parts[i+1].toLowerCase() === "utara") {
+                        direction = "North Central";
+                        i++; // Melewati kata 'utara'
+                    } else if (i + 1 < parts.length && parts[i+1].toLowerCase() === "selatan") {
+                        direction = "South Central";
+                        i++; // Melewati kata 'selatan'
+                    } else {
+                        direction = "Central";
+                    }
+                }
+                
+                else if (w === "pusat" || w === "central") direction = "Central";
                 else if (w === "tenggara" || w === "southeast") direction = "Southeast";
                 else if (w === "kota" || w === "city") hasKota = true;
                 else if (w === "kabupaten" || w === "kab" || w === "kab.") {
