@@ -32,12 +32,12 @@
 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">3. ORIGIN</label>
-                    <input type="text" id="origin" placeholder="Contoh: BKI10000 atau Jakarta Selatan" class="w-full px-4 py-2 border rounded-lg uppercase focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="origin" placeholder="Contoh: BKI10000 atau CGK10000" class="w-full px-4 py-2 border rounded-lg uppercase focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">4. DESTINATION</label>
-                    <input type="text" id="destination" placeholder="Contoh: UPG21817 atau Wonosobo" class="w-full px-4 py-2 border rounded-lg uppercase focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="destination" placeholder="Contoh: UPG21817 atau AMI10011" class="w-full px-4 py-2 border rounded-lg uppercase focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
 
                 <div>
@@ -185,9 +185,10 @@
         let dataCSVCache = {};
 
         function preLoadCSV() {
+            // Ditambahkan file zona.csv ke dalam antrian load
             const filesToLoad = [
                 "reg_shopee_1.csv", "reg_shopee_2.csv", "reg_shopee_3.csv", "jtr_shopee.csv",
-                "reg_tokopedia.csv", "jtr_tokopedia.csv"
+                "reg_tokopedia.csv", "jtr_tokopedia.csv", "zona.csv"
             ];
             
             filesToLoad.forEach(file => {
@@ -206,6 +207,27 @@
         }
 
         window.onload = preLoadCSV;
+
+        // Mesin pencari data dari Sheet ZONA
+        function cariDiZona(kode) {
+            let data = dataCSVCache["zona.csv"];
+            if (!data) return null;
+            
+            kode = kode.trim().toUpperCase();
+            
+            for (let i = 0; i < data.length; i++) {
+                let row = data[i];
+                let acuan = (row['CODING ACUAN'] || "").trim().toUpperCase();
+                let dest = (row['DEST'] || "").trim().toUpperCase();
+                
+                if (acuan === kode || dest === kode) {
+                    let kabKota = (row['KABUPATEN / KOTA'] || "").trim();
+                    let namaDaerah = (row['NAMA KAB/KOTA'] || "").trim();
+                    return `${kabKota} ${namaDaerah}`.trim();
+                }
+            }
+            return null;
+        }
 
         function cariSlaDiCache(fileNames, service, origin, destination) {
             let slaDitemukan = null;
@@ -284,17 +306,16 @@
                     isOriginDestRequired = false;
                 }
 
+                // Validasi Regex kembali diaktifkan wajib untuk SEMUA marketplace
                 if (isOriginDestRequired) {
-                    if (!isTokgisticOrTokopedia) {
-                        const regexKode = /^[A-Z]{3}\d+$/; 
-                        if (!regexKode.test(origin.toUpperCase())) {
-                            alert("Origin: harap input dengan benar (3 Huruf + minimal 5 Angka)");
-                            return;
-                        }
-                        if (!regexKode.test(destination.toUpperCase())) {
-                            alert("Destination: harap input dengan benar (3 Huruf + minimal 5 Angka)");
-                            return;
-                        }
+                    const regexKode = /^[A-Z]{3}\d+$/; 
+                    if (!regexKode.test(origin.toUpperCase())) {
+                        alert("Origin: harap input dengan benar (3 Huruf + minimal 5 Angka)");
+                        return;
+                    }
+                    if (!regexKode.test(destination.toUpperCase())) {
+                        alert("Destination: harap input dengan benar (3 Huruf + minimal 5 Angka)");
+                        return;
                     }
                 }
 
@@ -329,13 +350,51 @@
                         fileAntrean = ["data_default.csv"]; 
                     }
 
-                    let searchOrigin = isTokgisticOrTokopedia ? translateCityName(origin) : origin;
-                    let searchDest = isTokgisticOrTokopedia ? translateCityName(destination) : destination;
+                    let searchDest = destination.trim().toUpperCase();
+                    let searchOrigins = [origin.trim().toUpperCase()];
 
-                    let slaDitemukan = cariSlaDiCache(fileAntrean, service, searchOrigin, searchDest);
+                    // LOGIKA BARU PENCARIAN ZONA & TRANSLATOR
+                    if (isTokgisticOrTokopedia) {
+                        
+                        // 1. Proses Destination Wajib Lewat ZONA
+                        let zonaDest = cariDiZona(destination);
+                        if (!zonaDest) {
+                            document.getElementById('hasil').innerHTML = `<span class="text-red-500 text-lg">Destination tidak ditemukan di Zona</span>`;
+                            return;
+                        }
+                        searchDest = translateCityName(zonaDest);
 
-                    if (slaDitemukan !== null) {
-                        finalSla = slaDitemukan;
+                        // 2. Proses Origin (Bypass ZONA khusus CGK10000)
+                        if (origin.trim().toUpperCase() === "CGK10000") {
+                            searchOrigins = ["West Jakarta", "East Jakarta", "South Jakarta", "North Jakarta", "Central Jakarta"];
+                        } else {
+                            let zonaOrigin = cariDiZona(origin);
+                            if (!zonaOrigin) {
+                                document.getElementById('hasil').innerHTML = `<span class="text-red-500 text-lg">Origin tidak ditemukan di Zona</span>`;
+                                return;
+                            }
+                            searchOrigins = [translateCityName(zonaOrigin)];
+                        }
+                    }
+
+                    // TAHAP PENCARIAN SAPU JAGAT (Mengambil Nilai Maksimal / Terlama)
+                    let maxSla = -1;
+                    let isSlaFound = false;
+
+                    for (let i = 0; i < searchOrigins.length; i++) {
+                        let currentSearchOrigin = searchOrigins[i];
+                        let slaDitemukan = cariSlaDiCache(fileAntrean, service, currentSearchOrigin, searchDest);
+                        
+                        if (slaDitemukan !== null) {
+                            isSlaFound = true;
+                            if (slaDitemukan > maxSla) {
+                                maxSla = slaDitemukan;
+                            }
+                        }
+                    }
+
+                    if (isSlaFound) {
+                        finalSla = maxSla;
                         estimasiDate = tambahHariKalender(dateObj, finalSla);
                     } else {
                         document.getElementById('hasil').innerHTML = `<span class="text-red-500 text-lg">SLA tidak ditemukan</span>`;
