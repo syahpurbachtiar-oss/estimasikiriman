@@ -192,9 +192,10 @@
             ];
             
             filesToLoad.forEach(file => {
+                let isZona = (file === "zona.csv");
                 Papa.parse(file, {
                     download: true,
-                    header: true,
+                    header: !isZona, // Khusus zona.csv dibaca tanpa header agar kebal dari judul berantakan
                     complete: function(results) {
                         dataCSVCache[file] = results.data;
                         console.log(`${file} berhasil dimuat ke cache. Total baris: ${results.data.length}`);
@@ -208,21 +209,25 @@
 
         window.onload = preLoadCSV;
 
-        // Mesin pencari data dari Sheet ZONA
+        // Mesin pencari data dari Sheet ZONA (Metode Tembak Koordinat Kolom)
         function cariDiZona(kode) {
             let data = dataCSVCache["zona.csv"];
             if (!data) return null;
             
             kode = kode.trim().toUpperCase();
             
-            for (let i = 0; i < data.length; i++) {
+            // Mulai dari indeks i = 2 untuk melewati Baris 1 (Judul) dan Baris 2 (Header)
+            for (let i = 2; i < data.length; i++) {
                 let row = data[i];
-                let acuan = (row['CODING ACUAN'] || "").trim().toUpperCase();
-                let dest = (row['DEST'] || "").trim().toUpperCase();
+                if (!row) continue;
+                
+                // Menembak langsung ke posisi abjad kolom (Dimulai dari 0)
+                let acuan = (row[2] || "").trim().toUpperCase(); // Posisi 2 = Kolom C (CODING ACUAN)
+                let dest = (row[3] || "").trim().toUpperCase();  // Posisi 3 = Kolom D (DEST)
                 
                 if (acuan === kode || dest === kode) {
-                    let kabKota = (row['KABUPATEN / KOTA'] || "").trim();
-                    let namaDaerah = (row['NAMA KAB/KOTA'] || "").trim();
+                    let kabKota = (row[7] || "").trim();         // Posisi 7 = Kolom H (KABUPATEN / KOTA)
+                    let namaDaerah = (row[8] || "").trim();      // Posisi 8 = Kolom I (NAMA KAB/KOTA)
                     return `${kabKota} ${namaDaerah}`.trim();
                 }
             }
