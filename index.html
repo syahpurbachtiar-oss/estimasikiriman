@@ -209,7 +209,7 @@
 
         window.onload = preLoadCSV;
 
-        // Mesin pencari data dari Sheet ZONA (Metode Tembak Koordinat Kolom)
+        // Mesin pencari data dari Sheet ZONA (Metode Tembak Koordinat Kolom Hasil Revisi)
         function cariDiZona(kode) {
             let data = dataCSVCache["zona.csv"];
             if (!data) return null;
@@ -221,13 +221,13 @@
                 let row = data[i];
                 if (!row) continue;
                 
-                // Menembak langsung ke posisi abjad kolom (Dimulai dari 0)
-                let acuan = (row[2] || "").trim().toUpperCase(); // Posisi 2 = Kolom C (CODING ACUAN)
-                let dest = (row[3] || "").trim().toUpperCase();  // Posisi 3 = Kolom D (DEST)
+                // Menembak langsung ke posisi abjad kolom (Koordinat Baru karena Kolom A kosong dihapus sistem CSV)
+                let acuan = (row[1] || "").trim().toUpperCase(); // Posisi 1 = Kolom CODING ACUAN
+                let dest = (row[2] || "").trim().toUpperCase();  // Posisi 2 = Kolom DEST
                 
                 if (acuan === kode || dest === kode) {
-                    let kabKota = (row[7] || "").trim();         // Posisi 7 = Kolom H (KABUPATEN / KOTA)
-                    let namaDaerah = (row[8] || "").trim();      // Posisi 8 = Kolom I (NAMA KAB/KOTA)
+                    let kabKota = (row[6] || "").trim();         // Posisi 6 = Kolom KABUPATEN / KOTA
+                    let namaDaerah = (row[7] || "").trim();      // Posisi 7 = Kolom NAMA KAB/KOTA
                     return `${kabKota} ${namaDaerah}`.trim();
                 }
             }
