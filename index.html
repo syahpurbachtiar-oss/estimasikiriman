@@ -179,11 +179,27 @@
                 finalName = "Sotheast Maluku";
             }
 
-            // TAHAP SATPAM PINTU KELUAR: Filter Anomali Timor Tengah
+            // TAHAP SATPAM PINTU KELUAR 1: Filter Anomali Timor Tengah
             if (finalName.toLowerCase() === "north timor") {
                 finalName = "North Timor Tengah";
             } else if (finalName.toLowerCase() === "south timor") {
                 finalName = "South Timor Tengah";
+            }
+
+            // TAHAP SATPAM PINTU KELUAR 2: Normalisasi Typo & Format Tanda Baca
+            let aliasCheck = finalName.toLowerCase();
+            if (aliasCheck === "muko-muko" || aliasCheck === "muko muko") {
+                finalName = "Mukomuko";
+            } else if (aliasCheck === "pare-pare" || aliasCheck === "parepare") {
+                finalName = "Pare Pare";
+            } else if (aliasCheck === "sungaipenuh") {
+                finalName = "Sungai Penuh";
+            } else if (aliasCheck === "bau-bau") {
+                finalName = "Bau Bau";
+            } else if (aliasCheck === "toli-toli") {
+                finalName = "Tolitoli";
+            } else if (aliasCheck === "palangka raya") {
+                finalName = "Palangkaraya";
             }
 
             return finalName.trim();
