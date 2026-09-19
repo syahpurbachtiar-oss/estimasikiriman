@@ -390,6 +390,16 @@
                             document.getElementById('hasil').innerHTML = `<span class="text-red-500 text-lg">Destination tidak ditemukan di Zona</span>`;
                             return;
                         }
+
+                        // Filter Kategori Kota vs Kabupaten Berdasarkan 5 Angka Kode Destination
+                        let destDigits = destination.trim().slice(-5);
+                        let cleanDest = zonaDest.replace(/^(kota|kabupaten|kab\.|kab)\s+/i, '').trim();
+                        if (destDigits === "10000") {
+                            zonaDest = `Kota ${cleanDest}`;
+                        } else {
+                            zonaDest = `Kabupaten ${cleanDest}`;
+                        }
+
                         searchDest = translateCityName(zonaDest);
 
                         // 2. Proses Origin (Bypass ZONA khusus CGK10000)
@@ -401,6 +411,16 @@
                                 document.getElementById('hasil').innerHTML = `<span class="text-red-500 text-lg">Origin tidak ditemukan di Zona</span>`;
                                 return;
                             }
+
+                            // Filter Kategori Kota vs Kabupaten Berdasarkan 5 Angka Kode Origin
+                            let originDigits = origin.trim().slice(-5);
+                            let cleanOrigin = zonaOrigin.replace(/^(kota|kabupaten|kab\.|kab)\s+/i, '').trim();
+                            if (originDigits === "10000") {
+                                zonaOrigin = `Kota ${cleanOrigin}`;
+                            } else {
+                                zonaOrigin = `Kabupaten ${cleanOrigin}`;
+                            }
+
                             searchOrigins = [translateCityName(zonaOrigin)];
                         }
                     }
